@@ -23,6 +23,9 @@ const Login = () => {
     dispatch(loginStart());
     try {
       const data = await loginApi({ email, password });
+      // Store tokens in localStorage
+      localStorage.setItem("accessToken", data.token);
+      localStorage.setItem("refreshToken", data.refreshToken);
       dispatch(
         loginSuccess({
           user: data.user,

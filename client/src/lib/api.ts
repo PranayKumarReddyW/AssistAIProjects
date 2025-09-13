@@ -1,6 +1,6 @@
 // Consultations API
 export const getConsultations = async (patientId, token) => {
-  const API_BASE = "http://localhost:7000/api";
+  const API_BASE = "http://localhost:9000/api";
   const url = patientId
     ? `${API_BASE}/consultations?patientId=${patientId}`
     : `${API_BASE}/consultations`;
@@ -16,7 +16,7 @@ export const getConsultations = async (patientId, token) => {
 };
 
 export const createConsultation = async (consultation, token) => {
-  const API_BASE = "http://localhost:7000/api";
+  const API_BASE = "http://localhost:9000/api";
   const res = await fetch(`${API_BASE}/consultations`, {
     method: "POST",
     headers: {
@@ -32,7 +32,7 @@ export const createConsultation = async (consultation, token) => {
 
 // Transcriptions API
 export const getTranscriptions = async (consultationId, token) => {
-  const API_BASE = "http://localhost:7000/api";
+  const API_BASE = "http://localhost:9000/api";
   const url = consultationId
     ? `${API_BASE}/transcription?consultationId=${consultationId}`
     : `${API_BASE}/transcription`;
@@ -48,7 +48,7 @@ export const getTranscriptions = async (consultationId, token) => {
 };
 
 export const createTranscription = async (transcription, token) => {
-  const API_BASE = "http://localhost:7000/api";
+  const API_BASE = "http://localhost:9000/api";
   const res = await fetch(`${API_BASE}/transcription`, {
     method: "POST",
     headers: {
@@ -63,7 +63,7 @@ export const createTranscription = async (transcription, token) => {
 };
 // Update Appointment API function
 export async function updateAppointment(appointmentId, updateData, token) {
-  const API_BASE = "http://localhost:7000/api";
+  const API_BASE = "http://localhost:9000/api";
   const res = await fetch(`${API_BASE}/appointments/${appointmentId}`, {
     method: "PUT",
     headers: {
@@ -78,7 +78,7 @@ export async function updateAppointment(appointmentId, updateData, token) {
 }
 // Signup API function
 export async function signup({ name, email, password }) {
-  const API_BASE = "http://localhost:7000/api";
+  const API_BASE = "http://localhost:9000/api";
   const res = await fetch(`${API_BASE}/auth/signup`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -110,7 +110,7 @@ function mergeHeaders(defaultHeaders, customHeaders) {
 // You can now update your existing exported functions to use this pattern if needed.
 import axios from "axios";
 
-const API_URL = "http://localhost:7000/api";
+const API_URL = "http://localhost:9000/api";
 
 // Patient APIs
 export const getPatients = async (token, params = {}) => {
@@ -164,10 +164,13 @@ export const logout = async (token) => {
 
 // User APIs
 export const getUsers = async (token) => {
-  const res = await axios.get(`${API_URL}/users`, {
+  const API_BASE = "http://localhost:9000/api";
+  const res = await fetch(`${API_BASE}/users`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  return res.data;
+  const data = await res.json();
+  if (!res.ok) throw data;
+  return data;
 };
 
 export const getUserById = async (id, token) => {
@@ -192,32 +195,53 @@ export const deleteUser = async (id, token) => {
 };
 
 export const createAppointment = async (data, token) => {
-  const res = await axios.post(`${API_URL}/appointments`, data, {
-    headers: { Authorization: `Bearer ${token}` },
+  const API_BASE = "http://localhost:9000/api";
+  const res = await fetch(`${API_BASE}/appointments`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
   });
-  return res.data;
+  const result = await res.json();
+  if (!res.ok) throw result;
+  return result;
 };
 
 export const getAppointments = async (token, params = {}) => {
-  const res = await axios.get(`${API_URL}/appointments`, {
+  const API_BASE = "http://localhost:9000/api";
+  const query =
+    params && Object.keys(params).length
+      ? "?" + new URLSearchParams(params).toString()
+      : "";
+  const res = await fetch(`${API_BASE}/appointments${query}`, {
     headers: { Authorization: `Bearer ${token}` },
-    params,
   });
-  return res.data;
+  const result = await res.json();
+  if (!res.ok) throw result;
+  return result;
 };
 
 export const getAppointmentById = async (id, token) => {
-  const res = await axios.get(`${API_URL}/appointments/${id}`, {
+  const API_BASE = "http://localhost:9000/api";
+  const res = await fetch(`${API_BASE}/appointments/${id}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  return res.data;
+  const result = await res.json();
+  if (!res.ok) throw result;
+  return result;
 };
 
 export const deleteAppointment = async (id, token) => {
-  const res = await axios.delete(`${API_URL}/appointments/${id}`, {
+  const API_BASE = "http://localhost:9000/api";
+  const res = await fetch(`${API_BASE}/appointments/${id}`, {
+    method: "DELETE",
     headers: { Authorization: `Bearer ${token}` },
   });
-  return res.data;
+  const result = await res.json();
+  if (!res.ok) throw result;
+  return result;
 };
 
 // Report APIs

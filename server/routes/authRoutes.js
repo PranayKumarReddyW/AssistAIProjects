@@ -126,7 +126,31 @@ router.post("/login", async (req, res) => {
 // @access  Private
 router.get("/me", protect, async (req, res) => {
   // req.user is populated by the protect middleware
-  res.status(200).json(req.user);
+  // If user is a patient, fetch patient details
+  try {
+    let userInfo = req.user;
+    if (userInfo.role === "patient") {
+      const Patient = require("../models/PatientModel");
+      // Try to find patient by user id or email
+      let patientRecord = await Patient.findOne({
+        $or: [{ id: userInfo.id }, { "contact.email": userInfo.email }],
+      });
+      if (patientRecord) {
+        userInfo = {
+          ...userInfo.toObject(),
+          patient: patientRecord.toObject(),
+        };
+      }
+    }
+    res.status(200).json(userInfo);
+  } catch (err) {
+    res
+      .status(500)
+      .json({
+        error: "Failed to fetch user/patient info",
+        details: err.message,
+      });
+  }
 });
 
 // @desc    Refresh accessToken

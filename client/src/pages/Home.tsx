@@ -27,7 +27,7 @@ const Home = () => {
               <li>Modern, responsive UI</li>
             </ul>
           </div>
-          <div className="flex justify-center">
+          <div className="flex justify-center mb-8">
             <Button
               asChild
               size="lg"

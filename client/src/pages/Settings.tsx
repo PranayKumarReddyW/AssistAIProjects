@@ -50,6 +50,19 @@ interface ConsultationSettings {
 }
 
 export const Settings: React.FC = () => {
+  // Get user role from localStorage or API (replace with your logic)
+  const [role, setRole] = useState<string>("");
+  useEffect(() => {
+    // Example: get role from localStorage or API
+    const storedRole = localStorage.getItem("role");
+    if (storedRole) {
+      setRole(storedRole);
+    } else {
+      // Optionally fetch from API
+      // import("../lib/api").then(m => m.getMe(token)).then(user => setRole(user.role));
+    }
+    // eslint-disable-next-line
+  }, []);
   const [activeTab, setActiveTab] = useState<
     "profile" | "notifications" | "consultation" | "security" | "data"
   >("profile");
@@ -186,61 +199,59 @@ export const Settings: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Settings</h1>
-          <p className="text-muted-foreground">
-            Manage your profile, preferences, and system configuration
-          </p>
-        </div>
-        <Button onClick={saveSettings} disabled={loading}>
-          {loading ? (
-            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-          ) : saved ? (
-            <span className="text-medical-success">Saved!</span>
-          ) : (
-            <>
-              <Save className="h-4 w-4 mr-2" />
-              Save Changes
-            </>
-          )}
-        </Button>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Settings Navigation */}
-        <div className="lg:col-span-1">
-          <Card className="p-4">
-            <nav className="space-y-2">
-              {tabs.map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id as any)}
-                    className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors text-left ${
-                      activeTab === tab.id
-                        ? "bg-primary text-primary-foreground"
-                        : "hover:bg-muted text-muted-foreground hover:text-foreground"
-                    }`}
+          <div className="max-w-3xl mx-auto py-8">
+            <Card className="p-6">
+              <div className="mb-6 flex items-center justify-between">
+                <h1 className="text-2xl font-bold">Settings</h1>
+              </div>
+              <Separator className="mb-6" />
+              {/* Tabs */}
+              <div className="flex space-x-4 mb-6">
+                <Button
+                  variant={activeTab === "profile" ? "default" : "outline"}
+                  onClick={() => setActiveTab("profile")}
+                >
+                  <User className="h-4 w-4 mr-2" /> Profile
+                </Button>
+                <Button
+                  variant={
+                    activeTab === "notifications" ? "default" : "outline"
+                  }
+                  onClick={() => setActiveTab("notifications")}
+                >
+                  <Bell className="h-4 w-4 mr-2" /> Notifications
+                </Button>
+                {/* Only show Consultation tab for doctors */}
+                {role === "doctor" && (
+                  <Button
+                    variant={
+                      activeTab === "consultation" ? "default" : "outline"
+                    }
+                    onClick={() => setActiveTab("consultation")}
                   >
-                    <Icon className="h-4 w-4" />
-                    <span className="text-sm font-medium">{tab.label}</span>
-                  </button>
-                );
-              })}
-            </nav>
-          </Card>
-        </div>
-
-        {/* Settings Content */}
-        <div className="lg:col-span-3">
-          <Card className="p-6">
-            {/* Profile Settings */}
-            {activeTab === "profile" && (
-              <div className="space-y-6">
-                <div>
-                  <h2 className="text-xl font-semibold mb-4">Doctor Profile</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Mic className="h-4 w-4 mr-2" /> Consultation
+                  </Button>
+                )}
+                <Button
+                  variant={activeTab === "security" ? "default" : "outline"}
+                  onClick={() => setActiveTab("security")}
+                >
+                  <Shield className="h-4 w-4 mr-2" /> Security
+                </Button>
+                <Button
+                  variant={activeTab === "data" ? "default" : "outline"}
+                  onClick={() => setActiveTab("data")}
+                >
+                  <Database className="h-4 w-4 mr-2" /> Data
+                </Button>
+              </div>
+              <Separator className="mb-6" />
+              {/* Tab Content */}
+              {activeTab === "profile" && (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="name">Full Name</Label>
+                      <Label htmlFor="name">Name</Label>
                       <Input
                         id="name"
                         value={profile.name}
@@ -249,19 +260,16 @@ export const Settings: React.FC = () => {
                         }
                       />
                     </div>
-
                     <div className="space-y-2">
                       <Label htmlFor="email">Email</Label>
                       <Input
                         id="email"
-                        type="email"
                         value={profile.email}
                         onChange={(e) =>
                           setProfile({ ...profile, email: e.target.value })
                         }
                       />
                     </div>
-
                     <div className="space-y-2">
                       <Label htmlFor="phone">Phone</Label>
                       <Input
@@ -272,58 +280,58 @@ export const Settings: React.FC = () => {
                         }
                       />
                     </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="specialization">Specialization</Label>
-                      <Input
-                        id="specialization"
-                        value={profile.specialization}
-                        onChange={(e) =>
-                          setProfile({
-                            ...profile,
-                            specialization: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="license">License Number</Label>
-                      <Input
-                        id="license"
-                        value={profile.licenseNumber}
-                        onChange={(e) =>
-                          setProfile({
-                            ...profile,
-                            licenseNumber: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="experience">Years of Experience</Label>
-                      <Input
-                        id="experience"
-                        type="number"
-                        value={profile.experience}
-                        onChange={(e) =>
-                          setProfile({
-                            ...profile,
-                            experience: parseInt(e.target.value),
-                          })
-                        }
-                      />
-                    </div>
+                    {/* Doctor-only fields */}
+                    {role === "doctor" && (
+                      <>
+                        <div className="space-y-2">
+                          <Label htmlFor="specialization">Specialization</Label>
+                          <Input
+                            id="specialization"
+                            value={profile.specialization}
+                            onChange={(e) =>
+                              setProfile({
+                                ...profile,
+                                specialization: e.target.value,
+                              })
+                            }
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="license">License Number</Label>
+                          <Input
+                            id="license"
+                            value={profile.licenseNumber}
+                            onChange={(e) =>
+                              setProfile({
+                                ...profile,
+                                licenseNumber: e.target.value,
+                              })
+                            }
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="experience">
+                            Years of Experience
+                          </Label>
+                          <Input
+                            id="experience"
+                            type="number"
+                            value={profile.experience}
+                            onChange={(e) =>
+                              setProfile({
+                                ...profile,
+                                experience: parseInt(e.target.value),
+                              })
+                            }
+                          />
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
-              </div>
-            )}
-
-            {/* Notification Settings */}
-            {activeTab === "notifications" && (
-              <div className="space-y-6">
-                <div>
+              )}
+              {activeTab === "notifications" && (
+                <div className="space-y-6">
                   <h2 className="text-xl font-semibold mb-4">
                     Notification Preferences
                   </h2>
@@ -348,9 +356,7 @@ export const Settings: React.FC = () => {
                         }
                       />
                     </div>
-
                     <Separator />
-
                     <div className="flex items-center justify-between">
                       <div>
                         <Label htmlFor="sms-notifications">
@@ -371,9 +377,7 @@ export const Settings: React.FC = () => {
                         }
                       />
                     </div>
-
                     <Separator />
-
                     <div className="flex items-center justify-between">
                       <div>
                         <Label htmlFor="push-notifications">
@@ -394,9 +398,7 @@ export const Settings: React.FC = () => {
                         }
                       />
                     </div>
-
                     <Separator />
-
                     <div className="flex items-center justify-between">
                       <div>
                         <Label htmlFor="appointment-reminders">
@@ -417,9 +419,7 @@ export const Settings: React.FC = () => {
                         }
                       />
                     </div>
-
                     <Separator />
-
                     <div className="flex items-center justify-between">
                       <div>
                         <Label htmlFor="report-alerts">Report Alerts</Label>
@@ -440,13 +440,10 @@ export const Settings: React.FC = () => {
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
-
-            {/* Consultation Settings */}
-            {activeTab === "consultation" && (
-              <div className="space-y-6">
-                <div>
+              )}
+              {/* Only show consultation settings for doctors */}
+              {activeTab === "consultation" && role === "doctor" && (
+                <div className="space-y-6">
                   <h2 className="text-xl font-semibold mb-4">
                     Consultation Preferences
                   </h2>
@@ -468,7 +465,6 @@ export const Settings: React.FC = () => {
                           }
                         />
                       </div>
-
                       <div className="space-y-2">
                         <Label htmlFor="transcription-language">
                           Transcription Language
@@ -489,7 +485,6 @@ export const Settings: React.FC = () => {
                           <option value="hi">Hindi</option>
                         </select>
                       </div>
-
                       <div className="space-y-2">
                         <Label htmlFor="video-quality">Video Quality</Label>
                         <select
@@ -509,7 +504,6 @@ export const Settings: React.FC = () => {
                         </select>
                       </div>
                     </div>
-
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <div>
@@ -529,9 +523,7 @@ export const Settings: React.FC = () => {
                           }
                         />
                       </div>
-
                       <Separator />
-
                       <div className="flex items-center justify-between">
                         <div>
                           <Label htmlFor="ai-suggestions">AI Suggestions</Label>
@@ -550,9 +542,7 @@ export const Settings: React.FC = () => {
                           }
                         />
                       </div>
-
                       <Separator />
-
                       <div className="flex items-center justify-between">
                         <div>
                           <Label htmlFor="sentiment-analysis">
@@ -576,13 +566,9 @@ export const Settings: React.FC = () => {
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
-
-            {/* Security Settings */}
-            {activeTab === "security" && (
-              <div className="space-y-6">
-                <div>
+              )}
+              {activeTab === "security" && (
+                <div className="space-y-6">
                   <h2 className="text-xl font-semibold mb-4">
                     Security & Privacy
                   </h2>
@@ -601,7 +587,6 @@ export const Settings: React.FC = () => {
                         Enable 2FA
                       </Button>
                     </Card>
-
                     <Card className="p-4">
                       <h3 className="font-medium mb-2">Password</h3>
                       <p className="text-sm text-muted-foreground mb-3">
@@ -611,7 +596,6 @@ export const Settings: React.FC = () => {
                         Change Password
                       </Button>
                     </Card>
-
                     <Card className="p-4">
                       <h3 className="font-medium mb-2">Session Management</h3>
                       <p className="text-sm text-muted-foreground mb-3">
@@ -623,13 +607,9 @@ export const Settings: React.FC = () => {
                     </Card>
                   </div>
                 </div>
-              </div>
-            )}
-
-            {/* Data Management */}
-            {activeTab === "data" && (
-              <div className="space-y-6">
-                <div>
+              )}
+              {activeTab === "data" && (
+                <div className="space-y-6">
                   <h2 className="text-xl font-semibold mb-4">
                     Data Management
                   </h2>
@@ -646,7 +626,6 @@ export const Settings: React.FC = () => {
                         Export All Data
                       </Button>
                     </Card>
-
                     <Card className="p-4">
                       <div className="flex items-center space-x-2 mb-2">
                         <Upload className="h-5 w-5 text-medical-info" />
@@ -659,7 +638,6 @@ export const Settings: React.FC = () => {
                         Import Data
                       </Button>
                     </Card>
-
                     <Card className="p-4 border-medical-critical">
                       <div className="flex items-center space-x-2 mb-2">
                         <Shield className="h-5 w-5 text-medical-critical" />
@@ -679,9 +657,9 @@ export const Settings: React.FC = () => {
                     </Card>
                   </div>
                 </div>
-              </div>
-            )}
-          </Card>
+              )}
+            </Card>
+          </div>
         </div>
       </div>
     </div>

@@ -4,6 +4,9 @@ import {
   createAppointment,
   updateAppointment,
 } from "../lib/api";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store/store";
+import AppointmentForm from "@/components/AppointmentForm";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -42,12 +45,41 @@ export const Appointments: React.FC = () => {
     "all" | "scheduled" | "completed"
   >("all");
   const [loading, setLoading] = useState(true);
+  const [doctorsList, setDoctorsList] = useState<
+    { id: string; name: string }[]
+  >([]);
+  const userId = localStorage.getItem("userId") || "patient1";
+  const accessToken = useSelector((state: RootState) => state.auth.accessToken);
+  const user = useSelector((state: RootState) => state.auth.user);
+  const isPatient = user?.role === "patient";
+  const isDoctor = user?.role === "doctor";
 
   useEffect(() => {
+    // Fetch all users for doctor selection
+    const fetchUsers = async () => {
+      try {
+        const token =
+          accessToken ||
+          localStorage.getItem("accessToken") ||
+          "YOUR_ACCESS_TOKEN_HERE";
+        const users = await import("../lib/api").then((m) => m.getUsers(token));
+        // Filter for doctors only
+        const doctors = users.filter((u) => u.role === "doctor");
+        setDoctorsList(
+          doctors.map((u) => ({ id: u.id || u._id, name: u.name }))
+        );
+      } catch (err) {
+        setDoctorsList([]);
+      }
+    };
+    fetchUsers();
     fetchAppointments();
   }, [selectedDate, filterStatus]);
 
-  const token = localStorage.getItem("accessToken") || "YOUR_ACCESS_TOKEN_HERE";
+  const token =
+    accessToken ||
+    localStorage.getItem("accessToken") ||
+    "YOUR_ACCESS_TOKEN_HERE";
 
   const fetchAppointments = async () => {
     setLoading(true);
@@ -149,6 +181,13 @@ export const Appointments: React.FC = () => {
     return appointment.status === filterStatus;
   });
 
+  // Show Live Consultation only if appointment is booked and status is 'scheduled' or 'in-progress'
+  const hasLiveConsultation = appointments.some(
+    (appt) =>
+      appt.patientId === userId &&
+      (appt.status === "scheduled" || appt.status === "in-progress")
+  );
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -159,11 +198,28 @@ export const Appointments: React.FC = () => {
             Manage your consultation schedule and patient appointments
           </p>
         </div>
-        <Button size="lg" onClick={() => scheduleAppointment({})}>
-          <Plus className="h-5 w-5 mr-2" />
-          Schedule Appointment
-        </Button>
       </div>
+
+      {/* Only patients can book appointments */}
+      {isPatient && (
+        <AppointmentForm
+          userId={userId}
+          doctors={doctorsList}
+          onBooked={fetchAppointments}
+        />
+      )}
+
+      {/* Show Live Consultation button only if appointment is booked */}
+      {hasLiveConsultation && (
+        <div className="my-4">
+          <Button
+            variant="default"
+            onClick={() => (window.location.href = "/consultation")}
+          >
+            Go to Live Consultation
+          </Button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Calendar Sidebar */}

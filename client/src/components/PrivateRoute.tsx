@@ -5,13 +5,20 @@ import React from "react";
 
 interface PrivateRouteProps {
   children: React.ReactNode;
+  allowedRoles?: Array<"doctor" | "patient" | "admin">;
 }
 
-const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
+const PrivateRoute: React.FC<PrivateRouteProps> = ({
+  children,
+  allowedRoles,
+}) => {
   const accessToken = useSelector((state: RootState) => state.auth.accessToken);
-  // You can add more robust logic here (e.g., check user, token expiry, etc.)
+  const user = useSelector((state: RootState) => state.auth.user);
   if (!accessToken) {
     return <Navigate to="/login" replace />;
+  }
+  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/notfound" replace />;
   }
   return <>{children}</>;
 };

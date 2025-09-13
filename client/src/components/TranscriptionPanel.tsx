@@ -1,119 +1,114 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
-import { 
-  Bot, 
-  User, 
-  Heart, 
-  AlertTriangle, 
+import React, { useState, useRef, useEffect } from "react";
+// Add WebSocket for real-time transcription
+let ws: WebSocket | null = null;
+import SpeechToTextDemo from "@/components/SpeechToTextDemo";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import {
+  Bot,
+  User,
+  Heart,
+  AlertTriangle,
   CheckCircle,
   Edit3,
   RotateCcw,
   Send,
-  Clock
-} from 'lucide-react';
+  Clock,
+} from "lucide-react";
 
 interface TranscriptionEntry {
   id: string;
-  speaker: 'doctor' | 'patient';
+  speaker: "doctor" | "patient";
   text: string;
   timestamp: Date;
-  sentiment?: 'neutral' | 'confused' | 'distressed' | 'positive';
+  sentiment?: "neutral" | "confused" | "distressed" | "positive";
 }
 
 interface AIQuestion {
   id: string;
   text: string;
-  priority: 'high' | 'medium' | 'low';
+  priority: "high" | "medium" | "low";
   category: string;
   isRecommended?: boolean;
 }
 
 interface TranscriptionPanelProps {
-  currentLanguage: 'en' | 'hi';
-  onConditionUpdate: (id: string, status: 'unchecked' | 'confirmed' | 'denied' | 'partial', details?: string) => void;
+  currentLanguage: "en" | "hi";
+  onConditionUpdate: (
+    id: string,
+    status: "unchecked" | "confirmed" | "denied" | "partial",
+    details?: string
+  ) => void;
 }
 
 export const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
   currentLanguage,
-  onConditionUpdate
+  onConditionUpdate,
 }) => {
-  const [transcription, setTranscription] = useState<TranscriptionEntry[]>([
-    {
-      id: '1',
-      speaker: 'doctor',
-      text: 'Good morning! I\'m Dr. Singh from ACKO Medical team. I\'ll be conducting your Medical Examination Report today. This session will help us understand your current health status for your insurance policy. May I proceed?',
-      timestamp: new Date(Date.now() - 180000),
-      sentiment: 'neutral'
-    },
-    {
-      id: '2',
-      speaker: 'patient',
-      text: 'Yes, good morning doctor. I am ready to proceed.',
-      timestamp: new Date(Date.now() - 160000),
-      sentiment: 'positive'
-    },
-    {
-      id: '3',
-      speaker: 'doctor',
-      text: 'Perfect! Let me start with some basic information. Could you please confirm your full name for our records?',
-      timestamp: new Date(Date.now() - 140000),
-      sentiment: 'neutral'
-    },
-    {
-      id: '4',
-      speaker: 'patient',
-      text: 'My name is Rajesh Kumar.',
-      timestamp: new Date(Date.now() - 120000),
-      sentiment: 'neutral'
-    },
-    {
-      id: '5',
-      speaker: 'doctor',
-      text: 'Thank you, Mr. Kumar. Now I need to ask about your medical history. Do you have diabetes or have you ever been diagnosed with diabetes?',
-      timestamp: new Date(Date.now() - 60000),
-      sentiment: 'neutral'
-    },
-    {
-      id: '6',
-      speaker: 'patient',
-      text: 'Yes, I was diagnosed with Type 2 diabetes about 3 years ago.',
-      timestamp: new Date(Date.now() - 30000),
-      sentiment: 'neutral'
-    }
-  ]);
+  const [transcription, setTranscription] = useState<TranscriptionEntry[]>([]);
+  // Connect to backend Socket.io for real-time transcription
+  useEffect(() => {
+    // Import socket.io-client dynamically to avoid SSR issues
+    let socket;
+    import("socket.io-client").then(({ io }) => {
+      socket = io("http://localhost:9000");
+      socket.on("connect", () => {
+        console.log("Socket.io connected for transcription");
+        socket.emit("start-speech");
+      });
+      socket.on("transcript", (text) => {
+        setTranscription((prev) => [
+          ...prev,
+          {
+            id: Date.now().toString(),
+            speaker: "patient",
+            text,
+            timestamp: new Date(),
+            sentiment: "neutral",
+          },
+        ]);
+      });
+      socket.on("disconnect", () => {
+        console.log("Socket.io disconnected");
+      });
+    });
+    return () => {
+      if (socket) socket.disconnect();
+    };
+  }, []);
 
   const [aiQuestions, setAiQuestions] = useState<AIQuestion[]>([
     {
-      id: '1',
-      text: 'What medications are you currently taking for your diabetes?',
-      priority: 'high',
-      category: 'Diabetes Follow-up',
-      isRecommended: true
+      id: "1",
+      text: "What medications are you currently taking for your diabetes?",
+      priority: "high",
+      category: "Diabetes Follow-up",
+      isRecommended: true,
     },
     {
-      id: '2',
-      text: 'How do you monitor your blood sugar levels?',
-      priority: 'high',
-      category: 'Diabetes Management'
+      id: "2",
+      text: "How do you monitor your blood sugar levels?",
+      priority: "high",
+      category: "Diabetes Management",
     },
     {
-      id: '3',
-      text: 'Have you experienced any complications from diabetes?',
-      priority: 'medium',
-      category: 'Diabetes Complications'
-    }
+      id: "3",
+      text: "Have you experienced any complications from diabetes?",
+      priority: "medium",
+      category: "Diabetes Complications",
+    },
   ]);
 
-  const [customQuestion, setCustomQuestion] = useState('');
+  const [customQuestion, setCustomQuestion] = useState("");
   const transcriptionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Auto-scroll to bottom when new transcription is added
     if (transcriptionRef.current) {
-      transcriptionRef.current.scrollTop = transcriptionRef.current.scrollHeight;
+      transcriptionRef.current.scrollTop =
+        transcriptionRef.current.scrollHeight;
     }
   }, [transcription]);
 
@@ -121,39 +116,43 @@ export const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
     if (customQuestion.trim()) {
       const newEntry: TranscriptionEntry = {
         id: Date.now().toString(),
-        speaker: 'doctor',
+        speaker: "doctor",
         text: customQuestion,
         timestamp: new Date(),
-        sentiment: 'neutral'
+        sentiment: "neutral",
       };
-      setTranscription(prev => [...prev, newEntry]);
-      setCustomQuestion('');
+      setTranscription((prev) => [...prev, newEntry]);
+      setCustomQuestion("");
     }
   };
 
   const useAIQuestion = (question: AIQuestion) => {
     const newEntry: TranscriptionEntry = {
       id: Date.now().toString(),
-      speaker: 'doctor',
+      speaker: "doctor",
       text: question.text,
       timestamp: new Date(),
-      sentiment: 'neutral'
+      sentiment: "neutral",
     };
-    setTranscription(prev => [...prev, newEntry]);
-    
+    setTranscription((prev) => [...prev, newEntry]);
+
     // Update AI questions based on the question used
-    if (question.category === 'Diabetes Follow-up') {
-      onConditionUpdate('diabetes', 'partial', 'Following up on medication and management');
+    if (question.category === "Diabetes Follow-up") {
+      onConditionUpdate(
+        "diabetes",
+        "partial",
+        "Following up on medication and management"
+      );
     }
   };
 
   const getSentimentIcon = (sentiment?: string) => {
     switch (sentiment) {
-      case 'confused':
+      case "confused":
         return <AlertTriangle className="h-3 w-3 text-yellow-500" />;
-      case 'distressed':
+      case "distressed":
         return <AlertTriangle className="h-3 w-3 text-red-500" />;
-      case 'positive':
+      case "positive":
         return <CheckCircle className="h-3 w-3 text-green-500" />;
       default:
         return null;
@@ -161,10 +160,10 @@ export const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
   };
 
   const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('en-US', { 
-      hour12: false, 
-      hour: '2-digit', 
-      minute: '2-digit' 
+    return date.toLocaleTimeString("en-US", {
+      hour12: false,
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -178,19 +177,19 @@ export const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
             Real-Time Transcription
           </h2>
           <p className="text-sm text-muted-foreground">
-            Language: {currentLanguage === 'en' ? 'English' : 'हिंदी'}
+            Language: {currentLanguage === "en" ? "English" : "हिंदी"}
           </p>
         </div>
 
-        <div 
+        <div
           ref={transcriptionRef}
           className="flex-1 overflow-y-auto p-4 space-y-3"
-          style={{ height: 'calc(100% - 80px)' }}
+          style={{ height: "calc(100% - 80px)" }}
         >
           {transcription.map((entry) => (
             <div key={entry.id} className="flex space-x-3">
               <div className="flex-shrink-0">
-                {entry.speaker === 'doctor' ? (
+                {entry.speaker === "doctor" ? (
                   <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                     <User className="h-4 w-4 text-primary" />
                   </div>
@@ -200,11 +199,11 @@ export const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
                   </div>
                 )}
               </div>
-              
+
               <div className="flex-1 min-w-0">
                 <div className="flex items-center space-x-2 mb-1">
                   <span className="font-medium text-sm">
-                    {entry.speaker === 'doctor' ? 'Doctor:' : 'Rajesh Kumar:'}
+                    {entry.speaker === "doctor" ? "Doctor:" : "Rajesh Kumar:"}
                   </span>
                   <span className="text-xs text-muted-foreground flex items-center">
                     <Clock className="h-3 w-3 mr-1" />
@@ -212,12 +211,14 @@ export const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
                   </span>
                   {getSentimentIcon(entry.sentiment)}
                 </div>
-                
-                <div className={`p-3 rounded-lg ${
-                  entry.speaker === 'doctor' 
-                    ? 'bg-transcript-doctor' 
-                    : 'bg-transcript-patient'
-                }`}>
+
+                <div
+                  className={`p-3 rounded-lg ${
+                    entry.speaker === "doctor"
+                      ? "bg-transcript-doctor"
+                      : "bg-transcript-patient"
+                  }`}
+                >
                   <p className="text-sm">{entry.text}</p>
                 </div>
               </div>
@@ -233,18 +234,25 @@ export const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
             <Bot className="h-4 w-4 mr-2 text-purple-600" />
             AI Question Suggestions
           </h3>
-          
+
           <div className="space-y-2 mb-4">
             {aiQuestions.map((question) => (
-              <Card key={question.id} className="p-3 cursor-pointer hover:bg-ai-accent/50 transition-colors">
+              <Card
+                key={question.id}
+                className="p-3 cursor-pointer hover:bg-ai-accent/50 transition-colors"
+              >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center space-x-2 mb-1">
                       {question.isRecommended && (
                         <CheckCircle className="h-4 w-4 text-medical-success" />
                       )}
-                      <Badge 
-                        variant={question.priority === 'high' ? 'destructive' : 'secondary'}
+                      <Badge
+                        variant={
+                          question.priority === "high"
+                            ? "destructive"
+                            : "secondary"
+                        }
                         className="text-xs"
                       >
                         {question.category}
@@ -252,10 +260,10 @@ export const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
                     </div>
                     <p className="text-sm">{question.text}</p>
                   </div>
-                  
+
                   <div className="flex space-x-1 ml-2">
-                    <Button 
-                      size="sm" 
+                    <Button
+                      size="sm"
                       variant="ghost"
                       onClick={() => useAIQuestion(question)}
                       className="h-8 w-8 p-0"
@@ -274,18 +282,23 @@ export const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
             ))}
           </div>
 
-          {/* Custom Question Input */}
-          <div className="flex space-x-2">
+          {/* Custom Question Input with Speech-to-Text */}
+          <div className="flex space-x-2 items-center">
             <Input
               placeholder="Type your custom question..."
               value={customQuestion}
               onChange={(e) => setCustomQuestion(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && addCustomQuestion()}
+              onKeyPress={(e) => e.key === "Enter" && addCustomQuestion()}
               className="flex-1"
             />
             <Button onClick={addCustomQuestion} size="sm">
               <Send className="h-4 w-4" />
             </Button>
+            <div className="ml-2">
+              <SpeechToTextDemo
+                onTranscript={(text) => setCustomQuestion(text)}
+              />{" "}
+            </div>
           </div>
         </div>
       </div>

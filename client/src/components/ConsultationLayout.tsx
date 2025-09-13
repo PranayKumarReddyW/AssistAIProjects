@@ -9,6 +9,7 @@ import { ConsultationHeader } from "./ConsultationHeader";
 import { VideoPanel } from "./VideoPanel";
 import { TranscriptionPanel } from "./TranscriptionPanel";
 import { PatientPanel } from "./PatientPanel";
+import ChatPanel from "./ChatPanel";
 
 interface PatientInfo {
   name: string;
@@ -33,17 +34,45 @@ interface MedicalCondition {
 
 export const ConsultationLayout: React.FC = () => {
   const token = localStorage.getItem("accessToken") || "YOUR_ACCESS_TOKEN_HERE";
-
-  const [patient] = useState<PatientInfo>({
-    name: "Rajesh Kumar",
-    policyId: "ACK2024001234",
-    dob: "15/03/1985",
-    members: [
-      { name: "Rajesh Kumar", relation: "Self", dob: "15/03/1985" },
-      { name: "Priya Kumar", relation: "Wife", dob: "22/07/1988" },
-      { name: "Arjun Kumar", relation: "Son", dob: "10/05/2015" },
-    ],
-  });
+  const [patient, setPatient] = useState<PatientInfo | null>(null);
+  const [loadingPatient, setLoadingPatient] = useState(true);
+  const [userId, setUserId] = useState<string>("");
+  const [peerId, setPeerId] = useState<string>("");
+  // Fetch logged-in user info and patient details
+  useEffect(() => {
+    const fetchPatientInfo = async () => {
+      try {
+        // Get logged-in user info
+        const user = await import("../lib/api").then((m) => m.getMe(token));
+        setUserId(user.id || user._id || user.name || "");
+        let patientData;
+        // If user is a patient and has patient details, use them
+        if (user.role === "patient" && user.patient) {
+          patientData = {
+            name: user.patient.name || user.name,
+            policyId: user.patient.insurancePolicyNumber || "N/A",
+            dob: user.patient.dob
+              ? new Date(user.patient.dob).toLocaleDateString()
+              : "N/A",
+            members: user.patient.members || [],
+          };
+        } else {
+          // Fallback to user info
+          patientData = {
+            name: user.name,
+            policyId: user.policyId || "N/A",
+            dob: user.dob || "N/A",
+            members: user.members || [],
+          };
+        }
+        setPatient(patientData);
+      } catch (err) {
+        setPatient(null);
+      }
+      setLoadingPatient(false);
+    };
+    fetchPatientInfo();
+  }, [token]);
 
   const [medicalConditions, setMedicalConditions] = useState<
     MedicalCondition[]
@@ -133,41 +162,58 @@ export const ConsultationLayout: React.FC = () => {
 
   return (
     <div className="h-screen flex flex-col bg-background">
-      <ConsultationHeader
-        patientName={patient.name}
-        policyId={patient.policyId}
-      />
-
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Panel - Video Consultation */}
-        <div className="w-[30%] border-r border-border">
-          <VideoPanel
-            isCallActive={isCallActive}
-            isMuted={isMuted}
-            currentLanguage={currentLanguage}
-            onToggleMute={() => setIsMuted(!isMuted)}
-            onEndCall={() => setIsCallActive(false)}
-            onLanguageChange={setCurrentLanguage}
-          />
+      {loadingPatient ? (
+        <div className="flex items-center justify-center h-full">
+          Loading patient info...
         </div>
-
-        {/* Center Panel - Transcription & AI */}
-        <div className="w-[45%] border-r border-border">
-          <TranscriptionPanel
-            currentLanguage={currentLanguage}
-            onConditionUpdate={updateConditionStatus}
+      ) : patient ? (
+        <>
+          <ConsultationHeader
+            patientName={patient.name}
+            policyId={patient.policyId}
           />
+          <div className="flex-1 flex overflow-hidden">
+            {/* Center Panel - Transcription & AI */}
+            <div className="w-[70%] border-r border-border">
+              <TranscriptionPanel
+                currentLanguage={currentLanguage}
+                onConditionUpdate={updateConditionStatus}
+              />
+              {/* Add ChatPanel below transcription for demo */}
+              <div className="mt-4">
+                <div className="mb-2 flex gap-2 items-center">
+                  <label htmlFor="peerIdInput" className="text-sm">
+                    Chat with user:
+                  </label>
+                  <input
+                    id="peerIdInput"
+                    type="text"
+                    value={peerId}
+                    onChange={(e) => setPeerId(e.target.value)}
+                    placeholder="Enter peer userId"
+                    className="border rounded px-2 py-1 text-sm"
+                  />
+                </div>
+                {userId && peerId && (
+                  <ChatPanel userId={userId} peerId={peerId} />
+                )}
+              </div>
+            </div>
+            {/* Right Panel - Patient Info */}
+            <div className="w-[30%]">
+              <PatientPanel
+                patient={patient}
+                medicalConditions={medicalConditions}
+                onConditionUpdate={updateConditionStatus}
+              />
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="flex items-center justify-center h-full text-red-500">
+          Failed to load patient info.
         </div>
-
-        {/* Right Panel - Patient Info */}
-        <div className="w-[25%]">
-          <PatientPanel
-            patient={patient}
-            medicalConditions={medicalConditions}
-            onConditionUpdate={updateConditionStatus}
-          />
-        </div>
-      </div>
+      )}
     </div>
   );
 };
